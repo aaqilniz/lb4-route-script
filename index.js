@@ -1,3 +1,10 @@
+function capitalize(s) {
+  return s[0].toUpperCase() + s.slice(1);
+}
+
+function lowerCase(s) {
+  return s[0].toLowerCase() + s.slice(1);
+}
 
 function getQuery() {
   let query = '';
@@ -14,29 +21,31 @@ function getQuery() {
     if (arg.slice(0, 2) === '--') sliceUpto = 2;
     argumentFlag = argument[0].slice(sliceUpto, argument[0].length);
     if (argumentFlag === 'q' || argumentFlag === 'query') {
-      query = argument.length > 1 ? argument[1] : true;
+      query = argument.length > 1 ? argument[1] : '';
     }
   });
-  return query.replaceAll('eq', '=');
+  return query.replace(/eq/g, '=');
 }
 
-(async () => {
+(() => {
   const query = getQuery();
   const parts = query.split('|');
   const modelName = capitalize(parts[0]);
-  const existingRepo = parts[1];
+  const existingRepo = capitalize(parts[1]);
   const httpMethod = parts[2];
   const newMethod = parts[3];
   const params = parts[4].split(',') || [];
   const inputParams = {};
   let queryMethod = '';
   switch (httpMethod) {
-    case 'get': queryMethod = 'find'
+    case 'get':
+      queryMethod = 'find';
       break;
-    case 'post': queryMethod = 'create'
+    case 'post':
+      queryMethod = 'create';
       break;
   }
-  params.forEach(param => {
+  params.forEach((param) => {
     const paramParts = param.split(':');
     inputParams[paramParts[0]] = paramParts[1];
   });
@@ -47,44 +56,46 @@ function getQuery() {
   console.log('HTTP Method: ', httpMethod);
   console.log('Input Params: ', inputParams);
   console.log('SQL query: ', sqlQuery);
-  const imports = ``;
-  const constructor = `constructor() {}`;
+  const imports = `
+  import {${modelName}} from '../models';
+  import {${existingRepo}} from '../repositories';
+  import {repository} from '@loopback/repository';
+  import {get, getModelSchemaRef, param, requestBody, response} from '@loopback/rest';
+  `;
+  const constructor = `constructor(@repository(${existingRepo})
+    public ${lowerCase(existingRepo)}: ${existingRepo},) {}`;
   const customRoute = `${httpMethod}('/${newMethod}')
     @response(200, {
-    description: '${modelName} custom model instance',
-    content: {'application/json': {schema: getModelSchemaRef(${modelName})}},
+      description: '${modelName} custom model instance',
+      content: {'application/json': {schema: getModelSchemaRef(${modelName})}},
     })
-
-    async ${queryMethod}(@param.filter(${modelName}) filter?: Filter<Todo>): Promise<${modelName}[]> {
-      return this.${parts[0]}.execute('${sqlQuery}');
+    async ${queryMethod}(@param.filter(${modelName}) filter?: Filter<${modelName}>): Promise<${modelName}[]> {
+      return this.${lowerCase(modelName)}.execute('${sqlQuery}');
     }
   `;
   const controller = `
   ${imports}
   export class ${modelName}Controller {
     ${constructor}
-    
+
     ${customRoute}
   }`;
   console.log(controller);
 })();
 
 
-
-function capitalize(s) {
-  return s[0].toUpperCase() + s.slice(1);
-}
-
-
-
 /*
 
-  interface InputParams {
+interface InputParams {
   [key: string]: unknown;
 }
 
 function capitalize(s: string) {
   return s[0].toUpperCase() + s.slice(1);
+}
+
+function lowerCase(s: string) {
+  return s[0].toLowerCase() + s.slice(1);
 }
 
 function getQuery() {
@@ -112,7 +123,7 @@ function getQuery() {
   const query = getQuery();
   const parts = query.split('|');
   const modelName = capitalize(parts[0]);
-  const existingRepo = parts[1];
+  const existingRepo = capitalize(parts[1]);
   const httpMethod = parts[2];
   const newMethod = parts[3];
   const params = parts[4].split(',') || [];
@@ -137,16 +148,21 @@ function getQuery() {
   console.log('HTTP Method: ', httpMethod);
   console.log('Input Params: ', inputParams);
   console.log('SQL query: ', sqlQuery);
-  const imports = ``;
-  const constructor = `constructor() {}`;
+  const imports = `
+  import {${modelName}} from '../models';
+  import {${existingRepo}} from '../repositories';
+  import {repository} from '@loopback/repository';
+  import {get, getModelSchemaRef, param, requestBody, response} from '@loopback/rest';
+  `;
+  const constructor = `constructor(@repository(${existingRepo})
+    public ${lowerCase(existingRepo)}: ${existingRepo},) {}`;
   const customRoute = `${httpMethod}('/${newMethod}')
     @response(200, {
-    description: '${modelName} custom model instance',
-    content: {'application/json': {schema: getModelSchemaRef(${modelName})}},
+      description: '${modelName} custom model instance',
+      content: {'application/json': {schema: getModelSchemaRef(${modelName})}},
     })
-
-    async ${queryMethod}(@param.filter(${modelName}) filter?: Filter<Todo>): Promise<${modelName}[]> {
-      return this.${parts[0]}.execute('${sqlQuery}');
+    async ${queryMethod}(@param.filter(${modelName}) filter?: Filter<${modelName}>): Promise<${modelName}[]> {
+      return this.${lowerCase(modelName)}.execute('${sqlQuery}');
     }
   `;
   const controller = `
@@ -158,6 +174,5 @@ function getQuery() {
   }`;
   console.log(controller);
 })();
-
 
 */
